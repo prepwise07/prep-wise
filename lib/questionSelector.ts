@@ -2,19 +2,20 @@ import { Question } from "./questions";
 import { CandidateProfile } from "./resumeParser";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-
 export async function generateDynamicQuestions(profile: CandidateProfile, count: number = 5, customConcepts: string = ""): Promise<Question[]> {
     const rawData = profile.summary || profile.skills.join(", ");
+
+    let extraInstruct = "";
+    if (customConcepts && customConcepts.trim() !== "") {
+        extraInstruct = "\nThe candidate explicitly requested you focus strictly on these specific concepts: '" + customConcepts + "'";
+    }
 
     // Construct instructions to dynamically generate AI questions based strictly on user data
     const prompt = `
 You are an expert technical interviewer planning a technical interview.
 The candidate has provided the following raw script/data summarizing their background, skills, or specific requirements for this interview:
 "${rawData}"
-${customConcepts ? `\nThe candidate explicitly requested you focus strictly on these specific concepts: "${customConcepts}"` : ""}
+${extraInstruct}
 
 Generate EXACTLY ${count} technical interview questions tailored specifically to the data provided above. Do not ask generic questions unrelated to their script. Ensure the questions escalate in depth.
 
@@ -34,6 +35,10 @@ Do not use markdown wrappers like \`\`\`json. Just raw valid JSON output.
 `;
 
     try {
+        const openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
+
         const completion = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [{ role: "system", content: "You generate customized technical interview questions exactly matching provided candidate content." }, { role: "user", content: prompt }],

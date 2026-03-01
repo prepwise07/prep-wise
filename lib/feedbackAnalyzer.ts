@@ -1,9 +1,7 @@
 import OpenAI from "openai";
 import { Question } from "./questions";
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+
 
 export type FeedbackReport = {
     score: number; // 0-10
@@ -72,6 +70,10 @@ Do not include markdown blocks like \`\`\`json. Just the raw JSON. Wait, if the 
     }
 
     try {
+        const openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
+
         const completion = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [
