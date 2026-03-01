@@ -1,63 +1,65 @@
+"use client";
+
+import Link from "next/link";
 import Image from "next/image";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen flex flex-col relative">
+      <div className="grid-background" />
+      <div className="grid-crosses" />
+
+      {/* Navbar */}
+      <nav className="relative z-10 border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="16" r="14" stroke="#e8985a" strokeWidth="2.5" fill="none" />
+              <circle cx="12" cy="16" r="3" fill="#e8985a" />
+              <path d="M18 13 C22 13 22 19 18 19" stroke="#e8985a" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M20 11 C25 11 25 21 20 21" stroke="#e8985a" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+            </svg>
+            <span className="font-bold text-lg">PrepWise</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/sign-in" className="btn-outline text-sm py-2 px-5">Sign In</Link>
+            <Link href="/sign-up" className="btn-primary text-sm py-2 px-5">Get Started</Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+      </nav>
+
+      {/* Hero */}
+      <main className="relative z-10 flex-1 flex items-center justify-center px-6">
+        <div className="max-w-4xl mx-auto text-center space-y-8 animate-fade-in-up">
+          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight">
+            Master Your Next<br />
+            <span className="bg-gradient-to-r from-[var(--primary)] via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+              Technical Interview
+            </span>
+          </h1>
+          <p className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed">
+            AI-powered mock interviews tailored to your resume. Practice with real questions, speak out loud, and get instant feedback on your performance.
+          </p>
+          <div className="flex items-center justify-center gap-4 pt-2">
+            <Link href="/sign-up" className="btn-primary text-lg px-10 py-4">
+              Start for Free
+            </Link>
+            <Link href="/dashboard" className="btn-outline text-lg px-8 py-4">
+              Explore Courses
+            </Link>
+          </div>
+
+          {/* Robot */}
+          <div className="mt-8 animate-float">
             <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              src="/robot-hero.png"
+              alt="AI Robot"
+              width={360}
+              height={300}
+              className="mx-auto drop-shadow-2xl"
+              priority
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
         </div>
       </main>
     </div>

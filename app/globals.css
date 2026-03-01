@@ -1,8 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #ffffff;
+  --muted: #1a1a2e;
+  --muted-foreground: #a0a0b0;
+  --primary: #c8a2ff;
+  --primary-hover: #b088ee;
+  --primary-foreground: #0a0a0f;
+  --accent: #e8985a;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.15);
+  --card-bg: rgba(15, 15, 25, 0.8);
+  --card-bg-hover: rgba(20, 20, 35, 0.9);
+  --input-bg: rgba(30, 30, 50, 0.6);
+  --success: #22c55e;
+  --radius: 0.75rem;
 }
 
 @theme inline {
@@ -12,15 +25,442 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* === Ambient Background === */
+.ambient-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 15% 50%, rgba(200, 162, 255, 0.05), transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(232, 152, 90, 0.03), transparent 50%);
+  animation: ambient-shift 20s ease-in-out infinite alternate;
+}
+
+@keyframes ambient-shift {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+/* === Custom Scrollbar === */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(200, 162, 255, 0.3);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 162, 255, 0.6);
+}
+
+/* === Grid Background Pattern === */
+.grid-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+.grid-background::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(100, 60, 200, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(100, 60, 200, 0.04) 0%, transparent 50%);
+}
+
+/* Grid intersection crosses */
+.grid-crosses {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+  background-size: 80px 80px;
+  background-position: 0 0;
+}
+
+/* === Glass Cards === */
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: var(--border-hover);
+  background: var(--card-bg-hover);
+}
+
+/* === Auth Card === */
+.auth-card {
+  background: rgba(10, 10, 20, 0.85);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 20px 60px -10px rgba(0, 0, 0, 0.5),
+    0 0 100px -20px rgba(100, 60, 200, 0.1);
+}
+
+/* === Hero Banner === */
+.hero-banner {
+  background: linear-gradient(135deg,
+      rgba(30, 15, 60, 0.9) 0%,
+      rgba(50, 25, 90, 0.8) 40%,
+      rgba(40, 20, 80, 0.7) 100%);
+  border: 1px solid rgba(100, 60, 200, 0.2);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-banner::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 50%;
+  height: 200%;
+  background: radial-gradient(ellipse, rgba(100, 60, 200, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* === Buttons === */
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  padding: 12px 28px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-size: 0.95rem;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px -5px rgba(200, 162, 255, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--foreground);
+  font-weight: 500;
+  padding: 10px 24px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-outline:hover {
+  border-color: var(--border-hover);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.btn-success {
+  background: var(--success);
+  color: #fff;
+  font-weight: 600;
+  padding: 12px 32px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-success:hover {
+  background: #16a34a;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px -5px rgba(34, 197, 94, 0.3);
+}
+
+/* === Google OAuth Button === */
+.btn-google {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--foreground);
+  font-weight: 600;
+  padding: 14px 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-size: 0.95rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.btn-google:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px -5px rgba(255, 255, 255, 0.08);
+}
+
+.btn-google:active {
+  transform: translateY(0);
+}
+
+.btn-google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* === Auth Divider === */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 1.5rem 0;
+  gap: 1rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.auth-divider span {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* === Input Fields === */
+.input-field {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  color: var(--foreground);
+  font-size: 0.95rem;
+  width: 100%;
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.input-field::placeholder {
+  color: var(--muted-foreground);
+}
+
+.input-field:focus {
+  border-color: rgba(200, 162, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(200, 162, 255, 0.08);
+}
+
+/* === Animations === */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.85);
+    box-shadow: 0 0 0 0 rgba(200, 162, 255, 0.6);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 20px rgba(200, 162, 255, 0);
+  }
+
+  100% {
+    transform: scale(0.85);
+    box-shadow: 0 0 0 0 rgba(200, 162, 255, 0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s infinite;
+}
+
+.animate-slide-up {
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
+/* Stagger children */
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.stagger-5 {
+  animation-delay: 0.5s;
+}
+
+/* === Interview Cards === */
+.interview-card {
+  background: linear-gradient(135deg, rgba(25, 15, 50, 0.9), rgba(15, 15, 30, 0.9));
+  border: 1px solid rgba(100, 60, 200, 0.25);
+  border-radius: 16px;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.interview-card:hover {
+  border-color: rgba(100, 60, 200, 0.5);
+  box-shadow: 0 0 30px -10px rgba(100, 60, 200, 0.2);
+  transform: translateY(-2px);
+}
+
+.interview-card-user {
+  background: linear-gradient(135deg, rgba(15, 25, 15, 0.9), rgba(10, 20, 15, 0.9));
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  border-radius: 16px;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.interview-card-user:hover {
+  border-color: rgba(34, 197, 94, 0.35);
+  box-shadow: 0 0 30px -10px rgba(34, 197, 94, 0.15);
+  transform: translateY(-2px);
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
