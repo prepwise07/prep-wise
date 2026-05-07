@@ -4,14 +4,15 @@ import { generateDynamicQuestions } from "../../../lib/questionSelector";
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { profile, count, includeIntro, customConcepts } = body;
+        const { profile, count, includeIntro, customConcepts, difficulty } = body;
 
         if (!profile) {
             return NextResponse.json({ error: "Candidate profile required" }, { status: 400 });
         }
 
         const exactCount = count ? parseInt(count) : 5;
-        let questions = await generateDynamicQuestions(profile, exactCount, customConcepts);
+        const targetDifficulty = difficulty || "Medium";
+        let questions = await generateDynamicQuestions(profile, exactCount, customConcepts, targetDifficulty);
 
         if (includeIntro) {
             questions = [

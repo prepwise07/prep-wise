@@ -47,9 +47,11 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: radial-gradient(circle at 15% 50%, rgba(200, 162, 255, 0.05), transparent 50%),
-    radial-gradient(circle at 85% 30%, rgba(232, 152, 90, 0.03), transparent 50%);
-  animation: ambient-shift 20s ease-in-out infinite alternate;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(160, 100, 255, 0.22), transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(232, 152, 90, 0.15), transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(100, 40, 255, 0.15), transparent 60%);
+  animation: ambient-shift 25s ease-in-out infinite alternate;
 }
 
 @keyframes ambient-shift {
@@ -59,8 +61,38 @@ body {
   }
 
   100% {
-    transform: scale(1.1);
+    transform: scale(1.15) translate(2%, 2%);
     opacity: 1;
+  }
+}
+
+/* Floating Particle System Overlay (World-Class Aesthetic) */
+.particles-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 15% 15%, rgba(200, 162, 255, 0.4) 100%, transparent),
+    radial-gradient(1.5px 1.5px at 30% 45%, rgba(200, 162, 255, 0.3) 100%, transparent),
+    radial-gradient(1px 1px at 50% 10%, rgba(200, 162, 255, 0.2) 100%, transparent),
+    radial-gradient(1px 1px at 70% 60%, rgba(200, 162, 255, 0.3) 100%, transparent),
+    radial-gradient(1.5px 1.5px at 85% 25%, rgba(200, 162, 255, 0.4) 100%, transparent),
+    radial-gradient(1px 1px at 10% 85%, rgba(200, 162, 255, 0.2) 100%, transparent),
+    radial-gradient(120px 120px at 20% 20%, rgba(160, 100, 255, 0.05) 100%, transparent),
+    radial-gradient(180px 180px at 80% 80%, rgba(232, 152, 90, 0.03) 100%, transparent);
+  background-size: 550px 550px;
+  animation: particles-float 60s linear infinite;
+  opacity: 0.8;
+}
+
+@keyframes particles-float {
+  from {
+    transform: translateY(0) rotate(0);
+  }
+
+  to {
+    transform: translateY(-550px) rotate(15deg);
   }
 }
 
@@ -131,17 +163,74 @@ body {
   background: var(--card-bg-hover);
 }
 
-/* === Auth Card === */
+/* === Auth Card (World-Class Polish) === */
+.auth-container {
+  perspective: 2000px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  z-index: 20;
+  padding: 2rem 0;
+}
+
 .auth-card {
-  background: rgba(10, 10, 20, 0.85);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
+  background: rgba(10, 10, 15, 0.3);
+  backdrop-filter: blur(80px) saturate(200%);
+  -webkit-backdrop-filter: blur(80px) saturate(200%);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 36px;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 20px 60px -10px rgba(0, 0, 0, 0.5),
-    0 0 100px -20px rgba(100, 60, 200, 0.1);
+    inset 0 0 50px rgba(160, 100, 255, 0.08),
+    0 40px 100px -20px rgba(0, 0, 0, 0.8),
+    0 0 120px -30px rgba(160, 100, 255, 0.4);
+  transition: transform 1.2s cubic-bezier(0.2, 1, 0.2, 1), opacity 1s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Card Glow Halo Top Border Sparkle Effect */
+.auth-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200, 162, 255, 0.5), transparent);
+  filter: blur(0.5px);
+}
+
+.auth-card.flipping {
+  animation: cinematic-hyper-flip 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes cinematic-hyper-flip {
+  0% {
+    transform: rotateY(0) scale(1) translateZ(0);
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  30% {
+    transform: rotateY(90deg) scale(0.8) translateZ(-100px) rotateX(10deg);
+    opacity: 0.5;
+    filter: blur(4px);
+  }
+
+  60% {
+    transform: rotateY(180deg) scale(0.5) translateZ(-300px) rotateX(-15deg);
+    opacity: 0.2;
+    filter: blur(12px);
+  }
+
+  100% {
+    transform: rotateY(360deg) scale(0) translateZ(-500px) rotateX(0);
+    opacity: 0;
+    filter: blur(20px);
+  }
 }
 
 /* === Hero Banner === */
@@ -182,12 +271,35 @@ body {
 
 .btn-primary:hover {
   background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 25px -5px rgba(200, 162, 255, 0.3);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 12px 30px -5px rgba(200, 162, 255, 0.4);
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-primary-purple {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  color: white;
+  font-weight: 700;
+  padding: 14px 28px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 1rem;
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.btn-primary-purple:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(124, 58, 237, 0.6);
+  filter: brightness(1.15);
+}
+
+.btn-primary-purple:active {
+  transform: translateY(0) scale(0.97);
 }
 
 .btn-outline {
@@ -202,8 +314,14 @@ body {
 }
 
 .btn-outline:hover {
-  border-color: var(--border-hover);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--primary);
+  background: rgba(200, 162, 255, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(200, 162, 255, 0.15);
+}
+
+.btn-outline:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .btn-success {
@@ -239,20 +357,53 @@ body {
 }
 
 .btn-google:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 25px -5px rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 12px 30px -5px rgba(255, 255, 255, 0.12);
 }
 
 .btn-google:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.98);
 }
 
 .btn-google:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+/* === GitHub OAuth Button === */
+.btn-github {
+  background: #24292f;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 14px 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.btn-github:hover {
+  background: #1a1e22;
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.4);
+}
+
+.btn-github:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-github:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* === Auth Divider === */
@@ -273,10 +424,12 @@ body {
 
 .auth-divider span {
   color: rgba(255, 255, 255, 0.35);
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.2em;
+  background: #0a0a14;
+  padding: 0 12px;
 }
 
 /* === Input Fields === */
@@ -463,4 +616,101 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* === Logo Glass Tab (World-Class Integration) === */
+.logo-glass-tab {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 5px 16px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.logo-glass-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+/* === Interview Room === */
+.interview-video-container {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0a0a14;
+}
+
+.interview-video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+/* Conversation bubble animations */
+@keyframes message-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.chat-message {
+  animation: message-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Voice waveform animation */
+@keyframes waveform {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+
+.voice-wave-bar {
+  width: 3px;
+  background: var(--primary);
+  border-radius: 999px;
+  animation: waveform 0.8s ease-in-out infinite;
+}
+
+.voice-wave-bar:nth-child(2) { animation-delay: 0.15s; }
+.voice-wave-bar:nth-child(3) { animation-delay: 0.3s; }
+.voice-wave-bar:nth-child(4) { animation-delay: 0.45s; }
+
+/* Question progress indicator glow */
+@keyframes question-glow {
+  0%, 100% {
+    box-shadow: 0 0 4px rgba(200, 162, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(200, 162, 255, 0.6);
+  }
+}
+
+.question-active {
+  animation: question-glow 2s ease-in-out infinite;
+}
+
+/* End interview button pulse */
+@keyframes end-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.5);
+  }
+}
+
+.end-btn-pulse {
+  animation: end-pulse 2s ease-in-out infinite;
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { FeedbackReport as FeedbackReportType } from "../lib/feedbackAnalyzer";
+import { FeedbackReport as FeedbackReportType, VisualAnalysisSummary } from "../lib/feedbackAnalyzer";
 import { Question } from "../lib/questions";
-import { Award, Download, RefreshCcw } from "lucide-react";
+import { Award, Download, RefreshCcw, Eye, Brain, Activity, Smile } from "lucide-react";
 
 interface FeedbackReportProps {
     records: Record<string, FeedbackReportType>;
@@ -80,6 +80,53 @@ export default function FeedbackReport({ records, questions, onRestart }: Feedba
                     );
                 })}
             </div>
+
+            {/* Visual Analysis Section */}
+            {(() => {
+                // Grab visual summary from the first feedback entry that has one
+                const visualSummary: VisualAnalysisSummary | undefined =
+                    answeredQuestions.map(q => records[q.id]?.visualSummary).find(Boolean);
+                if (!visualSummary) return null;
+                return (
+                    <div className="glass-card p-6 border-[var(--primary)]/15 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-[var(--primary)] to-transparent opacity-40" />
+                        <div className="flex items-center gap-2 mb-5">
+                            <div className="p-2 rounded-xl bg-[var(--primary)]/10 border border-[var(--primary)]/20">
+                                <Brain size={16} className="text-[var(--primary)]" />
+                            </div>
+                            <h2 className="text-lg font-bold">Visual & Body Language Analysis</h2>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+                            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 text-center">
+                                <Activity size={18} className="mx-auto mb-2 text-[var(--primary)]" />
+                                <div className="text-2xl font-black text-white">{visualSummary.avg_confidence}<span className="text-sm text-white/30">/100</span></div>
+                                <div className="text-[10px] text-white/40 uppercase tracking-wider mt-1">Avg Confidence</div>
+                            </div>
+                            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 text-center">
+                                <Eye size={18} className="mx-auto mb-2 text-cyan-400" />
+                                <div className="text-2xl font-black text-white">{visualSummary.eye_contact_percentage}<span className="text-sm text-white/30">%</span></div>
+                                <div className="text-[10px] text-white/40 uppercase tracking-wider mt-1">Eye Contact</div>
+                            </div>
+                            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 text-center">
+                                <Activity size={18} className="mx-auto mb-2 text-green-400" />
+                                <div className="text-2xl font-black text-white">{visualSummary.presence_percentage}<span className="text-sm text-white/30">%</span></div>
+                                <div className="text-[10px] text-white/40 uppercase tracking-wider mt-1">Cam Presence</div>
+                            </div>
+                            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 text-center">
+                                <Smile size={18} className="mx-auto mb-2 text-[var(--accent)]" />
+                                <div className="text-lg font-black text-white capitalize">{visualSummary.dominant_emotion}</div>
+                                <div className="text-[10px] text-white/40 uppercase tracking-wider mt-1">Dominant Mood</div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                            <p className="text-sm text-white/60 leading-relaxed">👁️ {visualSummary.summary}</p>
+                            <p className="text-[10px] text-white/20 mt-2">{visualSummary.frames_analysed} frames analysed during the session</p>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Actions */}
             <div className="flex flex-wrap justify-between gap-4 pt-6 border-t border-white/5">

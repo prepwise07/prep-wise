@@ -1,17 +1,82 @@
-import OpenAI from "openai";
+import { generateJSON } from "./aiService";
 import { Question } from "./questions";
 
+/** Per-frame result from the Python DeepFace service */
+export type FrameAnalysis = {
+    face_detected: boolean;
+    dominant_emotion: string;
+    emotions?: Record<string, number>;
+    eye_contact: boolean;
+    confidence_score: number;  // 0-100
+    feedback_text?: string;
+    service_offline?: boolean;
+};
 
+/** Session-level visual summary produced by /summarise-session */
+export type VisualAnalysisSummary = {
+    summary: string;
+    avg_confidence: number;
+    presence_percentage: number;
+    eye_contact_percentage: number;
+    dominant_emotion: string;
+    frames_analysed: number;
+};
 
 export type FeedbackReport = {
-    score: number; // 0-10
+    score: number; // 0-100 (Final weighted score calculated)
+    metrics: {
+        relevance: number;
+        semantic_similarity: number;
+        technical_depth: number;
+        communication: number;
+    };
     strengths: string[];
     weaknesses: string[];
     missedPoints: string[];
     overallFeedback: string;
     suggestedAnswer: string;
     bodyLanguageFeedback?: string;
+    visualSummary?: VisualAnalysisSummary;
 };
+
+export async function analyzeSingleAnswer(question: Question, answer: string): Promise<FeedbackReport> {
+    const prompt = `
+    Evaluate this single technical interview answer. 
+    QUESTION: ${question.question}
+    EXPECTED KEY POINTS: ${question.keyPoints.join(", ")}
+    CANDIDATE ANSWER: "${answer}"
+
+    SCORING CRITERIA (Scale 0-10):
+    1. Relevance: Answer alignment.
+    2. Semantic Similarity: Nearness to elite technical standards.
+    3. Technical Depth: Use of specific industry terms/edges.
+    4. Communication: Structure and clarity.
+
+    RETURN STRICT JSON:
+    {
+      "score": number (0-100 based on weighted metrics),
+      "metrics": { "relevance": 0-10, "semantic_similarity": 0-10, "technical_depth": 0-10, "communication": 0-10 },
+      "strengths": ["string"],
+      "weaknesses": ["string"],
+      "missedPoints": ["string"],
+      "overallFeedback": "string",
+      "suggestedAnswer": "elite technical answer"
+    }
+
+    WEIGHTED CALCULATION: (Relevance*4) + (Similarity*2) + (Depth*1.5) + (Communication*2.5).
+    `;
+
+    try {
+        const report = await generateJSON<FeedbackReport>(prompt, "Evaluate this single technical interview answer.");
+        return report;
+    } catch (e) {
+        return {
+            score: 0,
+            metrics: { relevance: 0, semantic_similarity: 0, technical_depth: 0, communication: 0 },
+            strengths: [], weaknesses: ["Analysis failure"], missedPoints: [], overallFeedback: "Error processing answer.", suggestedAnswer: ""
+        };
+    }
+}
 
 export async function analyzeInterview(questions: Question[], fullTranscript: string, frames: string[] = []): Promise<Record<string, FeedbackReport>> {
     const questionList = questions.map(q => `
@@ -25,11 +90,11 @@ Key Points Expected: ${q.keyPoints.join(", ")}
 You are an extremely strict, elite Principal Staff Engineer evaluating a candidate's full technical interview transcript for PrepWise.
 Evaluate the candidate's answers iteratively for every single question asked based on the transcript provided.
 
-SCORING RUBRIC (0-10):
-- 9 to 10: Flawless, Staff-level exceptional quality.
-- 7 to 8: Good, passing score but missed minor nuances.
-- 5 to 6: Mediocre, lacking depth or precision.
-- 0 to 4: Complete failure, fundamental misunderstanding.
+SCORING CRITERIA (Scale each 0-10):
+1. **Relevance**: Did they actually answer what was asked vs rambling?
+2. **Semantic Similarity**: How close is their tech explanation to a standard industry-best "perfect" answer? 
+3. **Technical Depth**: Did they use appropriate professional terminology and cover edge cases?
+4. **Communication**: Is the answer structured, clear, and professional?
 
 INTERVIEW QUESTIONS ASKED:
 ${questionList}
@@ -37,74 +102,59 @@ ${questionList}
 FULL LIVE TRANSCRIPT:
 "${fullTranscript}"
 
-Analyze the transcript, map the candidate's responses to the specific questions, and format your output strictly as a JSON object where the keys are the exact Question IDs, and the values are their specific feedback reports matching this schema:
+Analyze the transcript, map responses to IDs, and return strictly JSON:
 {
   "q1_id_here": {
-    "score": number (0-10),
+    "metrics": {
+       "relevance": number,
+       "semantic_similarity": number,
+       "technical_depth": number,
+       "communication": number
+    },
     "strengths": ["string"],
     "weaknesses": ["string"],
     "missedPoints": ["string"],
     "overallFeedback": "string",
-    "suggestedAnswer": "string",
-    "bodyLanguageFeedback": "string (Analyze eye contact, posture, confidence if images provided. Otherwise leave empty)"
-  },
-  "intro-1": { ... }
+    "suggestedAnswer": "A perfect, high-level technical response to this question",
+    "bodyLanguageFeedback": "Visual feedback disabled in Groq mode"
+  }
 }
-Do not include markdown blocks like \`\`\`json. Just the raw JSON. Wait, if the candidate completely skipped or didn't get to answer a question, score it 0 and state they did not answer.
+
+WEIGHTED CALCULATION RULE:
+The final overall score for each question must be (Relevance*4) + (Similarity*2) + (Depth*1.5) + (Communication*2.5). 
+This will result in a 0-100 scale. Include this calculation result as "score" in the JSON.
+Do not use markdown blocks. Output raw valid JSON.
 `;
 
-    // Construct message payload supporting Vision
-    const contentPayload: any[] = [
-        { type: "text", text: prompt }
-    ];
-
-    if (frames && frames.length > 0) {
-        // limit to max 2 frames from the video to completely avoid OpenAI 'Payload Too Large' errors
-        const framesToUse = frames.length > 2 ? [frames[0], frames[frames.length - 1]] : frames;
-        for (const frame of framesToUse) {
-            contentPayload.push({
-                type: "image_url",
-                image_url: { url: frame }
-            });
-        }
-    }
-
     try {
-        const openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
+        const parsed = await generateJSON<Record<string, FeedbackReport>>(prompt, "Perform weighted NLP evaluation of transcript.");
+
+        if (!parsed) throw new Error("Failed to analyze interview with AI.");
+
+        // Ensure every key has a numeric score field if AI missed it in the JSON nesting
+        Object.keys(parsed).forEach(qid => {
+            const item = parsed[qid];
+            if (item.metrics && !item.score) {
+                item.score = (item.metrics.relevance * 4) + (item.metrics.semantic_similarity * 2) + (item.metrics.technical_depth * 1.5) + (item.metrics.communication * 2.5);
+                item.score = Math.round(item.score);
+            }
         });
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                { role: "system", content: "You are an expert technical interviewer giving structured JSON feedback for an entire transcript. If images of the candidate are provided, strictly evaluate their professional presence, eye contact, body language, and confidence as a hiring manager." },
-                { role: "user", content: contentPayload }
-            ],
-            response_format: { type: "json_object" },
-        });
-
-        const content = completion.choices[0].message.content;
-        if (!content) {
-            throw new Error("Failed to analyze interview with AI.");
-        }
-
-        return JSON.parse(content) as Record<string, FeedbackReport>;
+        return parsed;
     } catch (e: any) {
-        console.error("OpenAI API Quota Exceeded or Error. Returning Mock Feedback to prevent crash:", e);
-
-        // MOCK FALLBACK for 429 Quota Exceeded
-        const mockFallback: Record<string, FeedbackReport> = {};
+        console.error("Analysis failed. Triggering fallback.", e.message);
+        const fallback: Record<string, FeedbackReport> = {};
         questions.forEach(q => {
-            mockFallback[q.id] = {
-                score: 7,
-                strengths: ["Great initial attempt", "Confidence in voice"],
-                weaknesses: ["Needs deeper technical explanation", "Missed a few edge cases"],
-                missedPoints: ["Optimization considerations"],
-                overallFeedback: "You gave a solid answer but due to API quota limits, we are providing this fallback mock feedback so you can still view this page!",
-                suggestedAnswer: "In a real scenario, outline the complexity and architectural trade-offs.",
-                bodyLanguageFeedback: "Excellent eye contact and calm posture."
+            fallback[q.id] = {
+                score: 50,
+                metrics: { relevance: 5, semantic_similarity: 5, technical_depth: 5, communication: 5 },
+                strengths: ["Attempted to answer"],
+                weaknesses: ["AI analysis was interrupted; please refresh and try again."],
+                missedPoints: ["Analysis incomplete"],
+                overallFeedback: "A fallback score was generated due to intense server load.",
+                suggestedAnswer: "Refer to documentation for the ideal standard."
             };
         });
-        return mockFallback;
+        return fallback;
     }
 }

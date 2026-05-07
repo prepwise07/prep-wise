@@ -1,0 +1,9 @@
+# PrepWise — AI Mock Interviews
+
+[Sign In](http://localhost:3000/sign-in)
+[Get Started](http://localhost:3000/sign-up)
+
+# Master Your NextTechnical Interview
+AI-powered mock interviews tailored to your resume. Practice with real questions, speak out loud, and get instant feedback on your performance.
+[Start for Free](http://localhost:3000/sign-up)
+[Explore Courses](http://localhost:3000/dashboard)
