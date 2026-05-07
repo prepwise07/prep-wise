@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export const maxDuration = 60; // Allow enough time for search + inference
 
 export async function POST(req: Request) {

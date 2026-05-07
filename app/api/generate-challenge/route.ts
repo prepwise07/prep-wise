@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { generateJSON } from "@/lib/aiService";
 
+export const dynamic = "force-dynamic";
+
 export const maxDuration = 60; // Allow 60s for LLM processing
 
 export async function POST(req: Request) {

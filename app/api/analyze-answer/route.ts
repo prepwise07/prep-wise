@@ -3,6 +3,8 @@ import { analyzeInterview } from "../../../lib/feedbackAnalyzer";
 import { supabase } from "../../../lib/supabase";
 import { calculateWeightedScore, determineNextDifficulty } from "../../../lib/scoringEngine";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();

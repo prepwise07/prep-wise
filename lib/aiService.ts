@@ -81,11 +81,14 @@ export async function generateJSON<T>(systemPrompt: string, userPrompt: string):
     }
 
     // ── PHASE 2: Fallback to Groq (dynamic import — never runs at build time) ──
-    if (process.env.GROQ_API_KEY) {
+    const groqKey = process.env.GROQ_API_KEY;
+    if (groqKey && groqKey.trim() !== "" && !groqKey.includes("XXXX")) {
         try {
             console.log("[AIService] Attempting Fallback: Groq Llama 3.3 70b");
+            // Dynamic import prevents groq-sdk from being evaluated at build time
             const { default: Groq } = await import("groq-sdk");
-            const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+            
+            const groq = new Groq({ apiKey: groqKey });
             const completion = await groq.chat.completions.create({
                 model: "llama-3.3-70b-versatile",
                 messages: [

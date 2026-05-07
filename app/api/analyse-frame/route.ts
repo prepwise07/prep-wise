@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const PYTHON_SERVICE = process.env.NEXT_PUBLIC_ANALYSIS_SERVICE_URL || "http://localhost:5001";
 
 export async function GET() {
