@@ -16,7 +16,6 @@
     "@vapi-ai/web": "^2.5.2",
     "dotenv": "^17.3.1",
     "framer-motion": "^12.34.3",
-    "groq-sdk": "^0.37.0",
     "lucide-react": "^0.575.0",
     "mammoth": "^1.11.0",
     "my-pdf-parse": "npm:pdf-parse@^1.1.1",

@@ -80,30 +80,40 @@ export async function generateJSON<T>(systemPrompt: string, userPrompt: string):
         console.warn("[AIService] GEMINI_API_KEY not configured. Skipping to Groq.");
     }
 
-    // ── PHASE 2: Fallback to Groq (dynamic import — never runs at build time) ──
+    // ── PHASE 2: Fallback to Groq (Using direct fetch to avoid SDK build-time side effects) ──
     const groqKey = process.env.GROQ_API_KEY;
     if (groqKey && groqKey.trim() !== "" && !groqKey.includes("XXXX")) {
         try {
-            console.log("[AIService] Attempting Fallback: Groq Llama 3.3 70b");
-            // Dynamic import prevents groq-sdk from being evaluated at build time
-            const { default: Groq } = await import("groq-sdk");
+            console.log("[AIService] Attempting Fallback: Groq Llama 3.3 70b (via Fetch)");
             
-            const groq = new Groq({ apiKey: groqKey });
-            const completion = await groq.chat.completions.create({
-                model: "llama-3.3-70b-versatile",
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: userPrompt }
-                ],
-                response_format: { type: "json_object" }
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${groqKey}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: "llama-3.3-70b-versatile",
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: userPrompt }
+                    ],
+                    response_format: { type: "json_object" }
+                })
             });
 
-            const text = completion.choices[0].message.content || "{}";
-            console.log("[AIService] ✓ Groq fallback succeeded.");
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(`Groq API Error: ${response.status} ${JSON.stringify(errData)}`);
+            }
+
+            const data = await response.json();
+            const text = data.choices?.[0]?.message?.content || "{}";
+            console.log("[AIService] ✓ Groq fallback (fetch) succeeded.");
             return safeParseJSON<T>(text);
 
         } catch (groqError: any) {
-            console.error("[AIService] Groq fallback also failed:", groqError.message);
+            console.error("[AIService] Groq fallback failed:", groqError.message);
             throw new Error(`Both Gemini and Groq failed. Last error: ${groqError.message}`);
         }
     }
