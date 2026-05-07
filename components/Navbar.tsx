@@ -65,13 +65,17 @@ export default function Navbar() {
 
     return (
         <header className="fixed top-0 left-0 z-[100] w-full border-b border-white/5 bg-black/40 backdrop-blur-2xl transition-all duration-300">
-            <div className="max-w-[1600px] mx-auto px-10 h-20 flex items-center justify-between">
-                <div className="flex items-center gap-16">
+            <div className="max-w-[1600px] mx-auto px-6 lg:px-10 h-20 flex items-center justify-between gap-4">
+                {/* Left: Logo */}
+                <div className="flex items-center shrink-0">
                     <Link href="/" className="flex items-center gap-2 group transition-transform hover:scale-105 active:scale-95">
-                        <Logo className="h-12" />
+                        <Logo className="h-10" />
                     </Link>
+                </div>
 
-                    <nav className="hidden md:flex items-center gap-10">
+                {/* Center: Navigation Links */}
+                <div className="hidden lg:flex flex-1 items-center justify-center px-2 overflow-hidden">
+                    <nav className="flex items-center justify-center gap-5 xl:gap-8 flex-nowrap">
                         {navLinks.map((link) => {
                             const isActive = pathname === link.href || (link.name === "Candidate Profile" && pathname.includes("/dashboard"));
                             const Icon = link.icon;
@@ -79,23 +83,24 @@ export default function Navbar() {
                                 <Link
                                     key={link.name}
                                     href={link.href}
-                                    className={`relative group flex items-center gap-2 text-[13px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${isActive ? "text-[var(--primary)]" : "text-white/40 hover:text-white"
+                                    className={`relative group flex items-center gap-2 text-[11px] xl:text-[13px] font-black uppercase tracking-[0.1em] xl:tracking-[0.15em] leading-none transition-all duration-300 ${isActive ? "text-[var(--primary)]" : "text-white/40 hover:text-white"
                                         }`}
                                 >
-                                    {Icon && <Icon className="w-4 h-4" />}
-                                    {link.name}
-                                    <span className={`absolute -bottom-1 left-0 w-0 h-[2px] bg-[var(--primary)] transition-all duration-300 group-hover:w-full ${isActive ? 'w-full' : ''}`} />
+                                    {Icon && <Icon className="w-3.5 h-3.5 xl:w-4 xl:h-4 mb-[2px] hidden xl:block" />}
+                                    <span className="whitespace-nowrap">{link.name}</span>
+                                    <span className={`absolute -bottom-2 left-0 w-0 h-[2px] bg-[var(--primary)] transition-all duration-300 group-hover:w-full ${isActive ? 'w-full' : ''}`} />
                                 </Link>
                             );
                         })}
                     </nav>
                 </div>
 
-                <div className="flex items-center gap-6">
+                {/* Right: User Actions */}
+                <div className="flex items-center gap-4 lg:gap-6 shrink-0 z-10">
                     {user && (
                         <Link
                             href="/interview"
-                            className="hidden lg:inline-flex px-6 py-2.5 rounded-full bg-[var(--primary)] text-black font-black text-xs uppercase tracking-widest hover:brightness-125 transition-all shadow-[0_0_20px_rgba(200,162,255,0.3)] active:scale-95"
+                            className="hidden lg:flex items-center justify-center px-6 py-2.5 rounded-full bg-[var(--primary)] text-black font-black text-xs uppercase tracking-widest hover:brightness-125 transition-all shadow-[0_0_20px_rgba(200,162,255,0.3)] active:scale-95"
                         >
                             Launch Session
                         </Link>
@@ -106,21 +111,28 @@ export default function Navbar() {
                                 onClick={() => setDropdownOpen(!dropdownOpen)}
                                 className="flex items-center gap-3 group px-2 py-1 rounded-xl hover:bg-white/5 transition-all text-left"
                             >
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg">
+                                <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg overflow-hidden">
                                     {user.user_metadata?.avatar_url ? (
-                                        <img src={user.user_metadata.avatar_url} alt="User Avatar" className="w-full h-full object-cover rounded-xl" />
+                                        <img src={user.user_metadata.avatar_url} alt="User Avatar" className="w-full h-full object-cover" />
                                     ) : (
                                         <span className="text-white font-extrabold text-lg">{user.user_metadata?.full_name?.charAt(0) || "U"}</span>
                                     )}
                                 </div>
-                                <div className="hidden sm:block">
-                                    <p className="text-white font-bold text-sm leading-none">{user.user_metadata?.full_name || "Member"}</p>
-                                    <p className="text-white/40 text-[10px] uppercase font-black tracking-wider mt-1">Active</p>
+                                <div className="hidden sm:flex flex-col justify-center">
+                                    <p className="text-white font-bold text-sm leading-none mb-1">{user.user_metadata?.full_name || "Member"}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-white/40 text-[10px] uppercase font-black tracking-wider leading-none">Active</p>
+                                        {user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL && (
+                                            <span className="px-1.5 py-0.5 rounded-md bg-yellow-500/10 text-yellow-500 text-[8px] font-black uppercase tracking-tighter border border-yellow-500/20 leading-none">
+                                                Admin
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </button>
 
                             {dropdownOpen && (
-                                <div className="absolute right-0 mt-4 w-48 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-[#0c0c16] border border-white/10 overflow-hidden text-sm flex flex-col origin-top-right animate-in zoom-in-95 fade-in duration-200">
+                                <div className="absolute right-0 mt-3 w-48 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-[#0c0c16] border border-white/10 overflow-hidden text-sm flex flex-col origin-top-right animate-in zoom-in-95 fade-in duration-200">
                                     <div className="p-2">
                                         <button
                                             onClick={() => {
@@ -137,13 +149,13 @@ export default function Navbar() {
                             )}
                         </div>
                     ) : (
-                        <div className="flex items-center gap-6">
-                            <Link href="/sign-in" className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50 hover:text-white transition-all">
+                        <div className="flex items-center gap-4 lg:gap-6">
+                            <Link href="/sign-in" className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50 hover:text-white transition-all leading-none">
                                 Sign In
                             </Link>
                             <Link
                                 href="/sign-up"
-                                className="bg-white text-black px-7 py-3 rounded-full font-black text-[11px] uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]"
+                                className="bg-white text-black px-7 py-3 rounded-full font-black text-[11px] uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] leading-none flex items-center justify-center"
                             >
                                 Get Started
                             </Link>

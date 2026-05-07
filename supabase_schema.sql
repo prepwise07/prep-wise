@@ -7,6 +7,7 @@ CREATE TABLE profiles (
     display_name TEXT,
     current_role TEXT DEFAULT 'Software Engineer',
     profile_complete BOOLEAN DEFAULT FALSE,
+    is_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

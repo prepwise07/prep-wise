@@ -19,13 +19,16 @@ RUN apt-get update && apt-get install -y \
     golang-go \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-
 # Set up a non-root user for security
 RUN useradd -m -s /bin/bash runner
+
+# Switch to the runner user to install Rust locally
 USER runner
+WORKDIR /home/runner
+
+# Install Rust for the runner user
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/home/runner/.cargo/bin:${PATH}"
 WORKDIR /home/runner
 
 # Verify installations

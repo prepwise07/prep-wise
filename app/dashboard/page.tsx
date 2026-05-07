@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Logo from "@/components/Logo";
 import PerformanceChart from "@/components/PerformanceChart";
-import { MessageCircle, Terminal, Compass } from "lucide-react";
+import { MessageCircle, Terminal, Compass, Code } from "lucide-react";
 
 export default function DashboardPage() {
     const [isSidebarHovered, setIsSidebarHovered] = useState(false);
@@ -166,7 +166,11 @@ export default function DashboardPage() {
                             </Link>
                             <Link href="/compiler" className="flex items-center gap-4 px-3 py-3 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
                                 <div className="shrink-0 w-6 flex justify-center scale-110"><Terminal size={18} /></div>
-                                <span className={`transition-all duration-500 whitespace-nowrap text-[13px] ${isSidebarHovered ? 'opacity-100' : 'opacity-0'}`}>Simple Compiler</span>
+                                <span className={`transition-all duration-500 whitespace-nowrap text-[13px] ${isSidebarHovered ? 'opacity-100' : 'opacity-0'}`}>Quick Compiler</span>
+                            </Link>
+                            <Link href="/compiler/full-ide" className="flex items-center gap-4 px-3 py-3 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                                <div className="shrink-0 w-6 flex justify-center scale-110"><Code size={18} className="text-indigo-400" /></div>
+                                <span className={`transition-all duration-500 whitespace-nowrap text-[13px] ${isSidebarHovered ? 'opacity-100' : 'opacity-0'}`}>Advanced IDE</span>
                             </Link>
                         </nav>
 

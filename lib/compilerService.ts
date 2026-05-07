@@ -49,5 +49,26 @@ export async function shareProject(projectId: string) {
         .single();
 
     if (error) throw error;
-    return `http://localhost:3000/shared/${data.id}`;
+    const origin = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    return `${origin}/shared/${data.id}`;
+}
+
+export async function getSharedProject(shareId: string) {
+    const supabase = createSupabaseBrowserClient();
+    const { data: shareData, error: shareError } = await supabase
+        .from("ide_shares")
+        .select("project_id")
+        .eq("id", shareId)
+        .single();
+
+    if (shareError) throw shareError;
+
+    const { data: projectData, error: projectError } = await supabase
+        .from("ide_projects")
+        .select("*")
+        .eq("id", shareData.project_id)
+        .single();
+
+    if (projectError) throw projectError;
+    return projectData;
 }

@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Editor from "@monaco-editor/react";
+import dynamic from "next/dynamic";
+
+// Lazy load Monaco Editor to improve initial load performance
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+    ssr: false,
+    loading: () => (
+        <div className="h-full w-full flex items-center justify-center bg-black/60">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+        </div>
+    )
+});
 import {
     Code2, Terminal, Play, Send, Loader2, Award, Zap,
     Cpu, Target, AlertCircle, CheckCircle2, ChevronRight,
@@ -27,6 +37,7 @@ interface TestResult {
     output: string;
     expected: string;
     error: string | null;
+    time?: number;
 }
 
 interface RunOutputs {
@@ -181,7 +192,8 @@ export default function CodeChallengeRoom() {
                     passed: !err && outputStr === tc.expectedOutput.trim(),
                     output: outputStr,
                     expected: tc.expectedOutput.trim(),
-                    error: err
+                    error: err,
+                    time: data.time ? parseFloat(data.time) * 1000 : 0
                 };
             } catch (e) {
                 newOutputs[i] = { passed: false, output: "", expected: tc.expectedOutput.trim(), error: "Execution Failed" };
@@ -425,6 +437,11 @@ export default function CodeChallengeRoom() {
                                                                     ? <span className="flex items-center gap-1 text-xs font-black px-3 py-1 rounded bg-green-500/20 text-green-400"><CheckCircle2 size={14} /> PASSED</span>
                                                                     : <span className="flex items-center gap-1 text-xs font-black px-3 py-1 rounded bg-red-500/20 text-red-400"><AlertCircle size={14} /> FAILED</span>
                                                                 }
+                                                                {out.time !== undefined && (
+                                                                    <span className="text-[10px] font-mono text-white/30 flex items-center gap-1">
+                                                                        <Clock size={10} /> {out.time.toFixed(0)}ms
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                                 <div>

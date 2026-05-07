@@ -27,7 +27,7 @@ export default function GuidanceChat() {
     const [messages, setMessages] = useState<Message[]>([
         {
             role: "assistant",
-            content: "Hello! I'm your Career Guidance Advisor. I have access to real-time Google Search to give you the most up-to-date information on tech trends, hiring markets, and interview timelines.\\n\\nHow can I help you navigate your career today?"
+            content: "Hello! I'm your Career Guidance Advisor. I have access to real-time Google Search to give you the most up-to-date information on tech trends, hiring markets, and interview timelines.\n\nHow can I help you navigate your career today?"
         }
     ]);
     const [input, setInput] = useState("");
@@ -309,7 +309,7 @@ export default function GuidanceChat() {
                                         <ReactMarkdown
                                             components={{
                                                 a: ({ node, ...props }: any) => <a {...props} className="text-[var(--accent)] hover:underline" target="_blank" rel="noreferrer" />,
-                                                code: ({ node, ...props }: any) => <code {...props} className="bg-white/10 px-1 py-0.5 rounded textxs font-mono" />,
+                                                code: ({ node, ...props }: any) => <code {...props} className="bg-white/10 px-1 py-0.5 rounded text-xs font-mono" />,
                                                 strong: ({ node, ...props }: any) => <strong {...props} className="font-bold text-white" />
                                             }}
                                         >

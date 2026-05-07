@@ -5,7 +5,8 @@ import Editor from "@monaco-editor/react";
 import {
     File, Folder, Plus, X, Play, Save, Share2,
     Settings, Terminal as TerminalIcon, Cpu, Zap,
-    ChevronRight, BrainCircuit, Code, MessageSquare, Trash2, HelpCircle
+    ChevronRight, BrainCircuit, Code, MessageSquare, Trash2, HelpCircle, Compass, Clock, Monitor,
+    Package
 } from "lucide-react";
 import { saveProject, shareProject } from "@/lib/compilerService";
 
@@ -30,22 +31,38 @@ const DEFAULT_PROJECTS: Record<string, CodeFile[]> = {
     javascript: [{ name: "main.js", content: "console.log(\"Hello World\");", language: "javascript" }]
 };
 
-export default function IdeWorkspace() {
-    const [project, setProject] = useState<Project>({
+const LANGUAGES = [
+    { id: "javascript", label: "JavaScript", judgeId: 63, color: "text-yellow-400" },
+    { id: "python", label: "Python", judgeId: 71, color: "text-blue-400" },
+    { id: "java", label: "Java", judgeId: 62, color: "text-orange-400" },
+    { id: "cpp", label: "C++", judgeId: 54, color: "text-indigo-400" },
+    { id: "c", label: "C", judgeId: 50, color: "text-blue-500" },
+];
+
+export default function IdeWorkspace({ initialProject, readOnly = false }: { initialProject?: Project, readOnly?: boolean }) {
+    const [project, setProject] = useState<Project>(initialProject || {
         id: "temp",
         name: "My Project",
         language: "python",
         files: DEFAULT_PROJECTS["python"]
     });
 
+    useEffect(() => {
+        if (initialProject) {
+            setProject(initialProject);
+        }
+    }, [initialProject]);
+
     const [activeFileIndex, setActiveFileIndex] = useState(0);
     const [output, setOutput] = useState("");
-    const [stdin, setStdin] = useState("");
     const [isRunning, setIsRunning] = useState(false);
+    const [metrics, setMetrics] = useState<{ time?: string; memory?: string } | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(true);
-    const [activeTab, setActiveTab] = useState<"explorer" | "ai">("explorer");
+    const [activeTab, setActiveTab] = useState<"explorer" | "ai" | "packages">("explorer");
     const [aiResponse, setAiResponse] = useState<{ explanation: string, suggestedCode: string | null } | null>(null);
     const [isAiLoading, setIsAiLoading] = useState(false);
+    const [stdin, setStdin] = useState("");
+    const [consoleTab, setConsoleTab] = useState<"output" | "stdin">("output");
 
     const currentFile = project.files[activeFileIndex];
 
@@ -58,48 +75,54 @@ export default function IdeWorkspace() {
 
     const runCode = async () => {
         setIsRunning(true);
-        setOutput("Submitting code to remote sandbox...");
+        setOutput("Executing code via Judge0 API...");
+        setMetrics(null);
+
+        const langData = LANGUAGES.find(l => l.id === project.language);
+        if (!langData) {
+            setOutput("Error: Selected language not supported for execution.");
+            setIsRunning(false);
+            return;
+        }
 
         try {
-            // Note: In real setup, this points to your COMPILER_SERVICE_URL
-            const res = await fetch("http://localhost:5000/execute", {
+            const res = await fetch("/api/run-code", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    language: project.language,
-                    files: project.files,
+                    files: project.files.map(f => ({ name: f.name, content: f.content })),
+                    languageId: langData.judgeId,
                     stdin
                 })
             });
             const data = await res.json();
 
             if (data.error) {
-                setOutput(`Queue Error: ${data.error}`);
-                setIsRunning(false);
-                return;
-            }
-
-            const { jobId } = data;
-
-            // Polling for status
-            const pollInterval = setInterval(async () => {
-                const statusRes = await fetch(`http://localhost:5000/status/${jobId}`);
-                const data = await statusRes.json();
-
-                if (data.status === "completed") {
-                    clearInterval(pollInterval);
-                    const { stdout, stderr } = data.result;
-                    setOutput((stdout || "") + (stderr ? `\n\nERROR:\n${stderr}` : ""));
-                    setIsRunning(false);
-                } else if (data.status === "failed") {
-                    clearInterval(pollInterval);
-                    setOutput("System Error: Task failed to execute in sandbox.");
-                    setIsRunning(false);
+                setOutput(`Execution Error: ${data.error}`);
+            } else {
+                let finalOutput = "";
+                if (data.compile_output) {
+                    finalOutput += `COMPILATION ERROR:\n${data.compile_output}\n\n`;
                 }
-            }, 1000);
+                if (data.stderr) {
+                    finalOutput += `RUNTIME ERROR:\n${data.stderr}\n\n`;
+                }
+                if (data.stdout) {
+                    finalOutput += data.stdout;
+                }
+                if (!finalOutput && !data.compile_output && !data.stderr) {
+                    finalOutput = "Program executed successfully with no output.";
+                }
 
+                setOutput(finalOutput);
+                setMetrics({
+                    time: data.time ? `${(parseFloat(data.time) * 1000).toFixed(0)} ms` : undefined,
+                    memory: data.memory ? `${(data.memory / 1024).toFixed(2)} MB` : undefined
+                });
+            }
         } catch (err: any) {
-            setOutput(`Failed to connect to execution engine. Ensure the backend is running.\n\nDetails: ${err.message}`);
+            setOutput(`Failed to connect to execution engine.\n\nDetails: ${err.message}`);
+        } finally {
             setIsRunning(false);
         }
     };
@@ -229,14 +252,23 @@ export default function IdeWorkspace() {
                         {isRunning ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <Play size={14} fill="currentColor" />}
                         Run code
                     </button>
-                    <button
-                        onClick={handleSave}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:text-white font-black text-xs uppercase tracking-widest transition-all"
-                    >
-                        <Save size={14} />
-                        Save
-                    </button>
-                    <button onClick={handleShare} className="p-2 text-white/40 hover:text-white transition-all"><Share2 size={18} /></button>
+                    {!readOnly && (
+                        <>
+                            <button
+                                onClick={handleSave}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:text-white font-black text-xs uppercase tracking-widest transition-all"
+                            >
+                                <Save size={14} />
+                                Save
+                            </button>
+                            <button onClick={handleShare} className="p-2 text-white/40 hover:text-white transition-all"><Share2 size={18} /></button>
+                        </>
+                    )}
+                    {readOnly && (
+                        <div className="flex items-center gap-2 px-4 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[9px] font-black uppercase tracking-widest">
+                            <Compass size={12} /> Read Only Mode
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -256,6 +288,13 @@ export default function IdeWorkspace() {
                     >
                         <BrainCircuit size={20} />
                     </button>
+                    <button
+                        onClick={() => { setActiveTab("packages"); setSidebarOpen(true); }}
+                        className={`p-3 rounded-xl transition-all ${activeTab === "packages" ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "text-white/20 hover:text-white/40"}`}
+                        title="Libraries & Packages"
+                    >
+                        <Package size={20} />
+                    </button>
                     <div className="mt-auto flex flex-col gap-4 pb-4">
                         <button className="p-2 text-white/10 hover:text-white/30 transition-all" onClick={() => setSidebarOpen(!sidebarOpen)} title="Toggle Sidebar">
                             <ChevronRight className={`transition-transform duration-300 ${sidebarOpen ? 'rotate-180' : ''}`} />
@@ -267,7 +306,9 @@ export default function IdeWorkspace() {
                 {sidebarOpen && (
                     <div className="w-64 bg-black/40 border-r border-white/5 flex flex-col shrink-0 animate-in slide-in-from-left duration-300">
                         <div className="h-12 border-b border-white/5 flex items-center justify-between px-4">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{activeTab === "ai" ? "AI Assistant" : "Project Explorer"}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                                {activeTab === "ai" ? "AI Assistant" : activeTab === "packages" ? "Libraries" : "Project Explorer"}
+                            </span>
                             {activeTab === "explorer" && <Plus size={14} className="text-white/40 hover:text-white cursor-pointer" onClick={addFile} />}
                         </div>
 
@@ -292,7 +333,7 @@ export default function IdeWorkspace() {
                                         </div>
                                     ))}
                                 </div>
-                            ) : (
+                            ) : activeTab === "ai" ? (
                                 <div className="p-4 space-y-6">
                                     <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl items-center flex flex-col text-center space-y-3">
                                         <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center">
@@ -337,7 +378,7 @@ export default function IdeWorkspace() {
                                             <p className="text-[11px] text-white/60 leading-relaxed italic line-clamp-6 hover:line-clamp-none transition-all cursor-pointer">
                                                 "{aiResponse.explanation}"
                                             </p>
-                                            {aiResponse.suggestedCode && (
+                                            {aiResponse.suggestedCode && !readOnly && (
                                                 <button
                                                     onClick={applyFix}
                                                     className="w-full py-2 bg-pink-500/20 border border-pink-500/30 rounded-lg text-[9px] font-black uppercase tracking-widest text-pink-400 hover:bg-pink-500/30 transition-all"
@@ -347,6 +388,45 @@ export default function IdeWorkspace() {
                                             )}
                                         </div>
                                     )}
+                                </div>
+                            ) : (
+                                <div className="p-6 space-y-8">
+                                    <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl flex flex-col items-center text-center space-y-3">
+                                        <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center">
+                                            <Package size={24} className="text-indigo-400" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-black uppercase tracking-widest text-white/80">Packages</h4>
+                                            <p className="text-[10px] text-white/30 tracking-tight">Standard Libraries included.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] block px-1">Pre-Installed</span>
+                                        <div className="space-y-2">
+                                            {project.language === "python" && ["NumPy", "Pandas", "Requests", "SciPy", "Matplotlib"].map(pkg => (
+                                                <div key={pkg} className="flex items-center justify-between p-3 rounded-xl bg-white/2 border border-white/5">
+                                                    <span className="text-xs font-mono text-white/60">{pkg}</span>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/50" />
+                                                </div>
+                                            ))}
+                                            {project.language === "javascript" && ["Axios", "Lodash", "Moment", "Crypto-JS"].map(pkg => (
+                                                <div key={pkg} className="flex items-center justify-between p-3 rounded-xl bg-white/2 border border-white/5">
+                                                    <span className="text-xs font-mono text-white/60">{pkg}</span>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/50" />
+                                                </div>
+                                            ))}
+                                            {project.language === "java" && ["Gson", "Jackson", "Guava", "Apache Commons"].map(pkg => (
+                                                <div key={pkg} className="flex items-center justify-between p-3 rounded-xl bg-white/2 border border-white/5">
+                                                    <span className="text-xs font-mono text-white/60">{pkg}</span>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500/50" />
+                                                </div>
+                                            ))}
+                                            {(!["python", "javascript", "java"].includes(project.language)) && (
+                                                <p className="text-[10px] text-white/20 italic p-2 text-center">Standard library exports enabled for this runtime.</p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -392,47 +472,46 @@ export default function IdeWorkspace() {
                         />
                     </div>
 
-                    {/* Console & Stdin Area */}
+                    {/* Console & Output Area */}
                     <div className="h-64 bg-black border-t border-white/10 flex flex-col shrink-0">
                         <div className="h-10 border-b border-white/5 flex items-center justify-between px-6 shrink-0 bg-white/2">
-                            <div className="flex items-center gap-6">
-                                <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--primary)] border-b-2 border-[var(--primary)] h-10 px-2 transition-all">
-                                    <TerminalIcon size={14} /> Console
+                            <div className="flex items-center gap-6 h-full">
+                                <button
+                                    onClick={() => setConsoleTab("output")}
+                                    className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest h-full px-2 transition-all border-b-2 ${consoleTab === "output" ? "text-[var(--primary)] border-[var(--primary)]" : "text-white/20 border-transparent hover:text-white/40"}`}>
+                                    <TerminalIcon size={14} /> Output
                                 </button>
-                                <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white/40 h-10 px-2 transition-all">
-                                    <Zap size={14} /> Stdin
+                                <button
+                                    onClick={() => setConsoleTab("stdin")}
+                                    className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest h-full px-2 transition-all border-b-2 ${consoleTab === "stdin" ? "text-[var(--primary)] border-[var(--primary)]" : "text-white/20 border-transparent hover:text-white/40"}`}>
+                                    <Monitor size={14} /> Custom Input
                                 </button>
                             </div>
                             <button onClick={() => setOutput("")} className="text-white/20 hover:text-white transition-all"><Trash2 size={14} /></button>
                         </div>
 
                         <div className="flex-1 flex overflow-hidden">
-                            {/* Stdin Panel (Left small part) */}
-                            <div className="w-64 border-r border-white/5 flex flex-col">
-                                <textarea
-                                    className="flex-1 bg-black/40 p-4 font-mono text-sm text-white/50 resize-none outline-none placeholder:text-white/10"
-                                    placeholder="Program input here..."
-                                    value={stdin}
-                                    onChange={(e) => setStdin(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Stdout Panel (Right large part) */}
-                            <div className="flex-1 p-6 font-mono text-sm overflow-y-auto no-scrollbar selection:bg-indigo-500/30">
-                                {!output && !isRunning ? (
-                                    <div className="h-full flex flex-col items-center justify-center opacity-10 text-center space-y-4">
-                                        <TerminalIcon size={40} />
-                                        <p className="text-xs font-bold uppercase tracking-widest">Awaiting execution...</p>
-                                    </div>
-                                ) : isRunning ? (
-                                    <div className="flex items-center gap-3 text-indigo-400 animate-pulse">
-                                        <ChevronRight size={16} />
-                                        <span className="font-bold tracking-widest uppercase text-xs">Processing in remote sandbox...</span>
-                                    </div>
-                                ) : (
-                                    <pre className="text-white/90 whitespace-pre-wrap">{output}</pre>
-                                )}
-                            </div>
+                            {consoleTab === "output" ? (
+                                <div className="flex-1 overflow-y-auto p-4 font-mono text-sm custom-scrollbar">
+                                    {output ? (
+                                        <pre className="whitespace-pre-wrap break-all text-white/80">{output}</pre>
+                                    ) : (
+                                        <div className="h-full flex flex-col items-center justify-center opacity-10 text-center space-y-4">
+                                            <TerminalIcon size={40} />
+                                            <p className="text-xs font-bold uppercase tracking-widest">Awaiting execution...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col">
+                                    <textarea
+                                        value={stdin}
+                                        onChange={(e) => setStdin(e.target.value)}
+                                        className="flex-1 bg-black/20 p-4 text-white/80 text-sm font-mono outline-none resize-none custom-scrollbar placeholder:text-white/10"
+                                        placeholder="Enter program input here..."
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Status Footer */}
@@ -441,9 +520,19 @@ export default function IdeWorkspace() {
                                 <span className="text-[9px] font-bold uppercase">UTF-8</span>
                                 <span className="text-[9px] font-bold uppercase">Ready</span>
                             </div>
-                            <div className="flex items-center gap-4 opacity-30">
-                                <Cpu size={12} />
-                                <span className="text-[9px] font-bold uppercase tracking-tighter">Mem: 0.0s</span>
+                            <div className="flex items-center gap-6">
+                                {metrics?.time && (
+                                    <div className="flex items-center gap-2 opacity-40">
+                                        <Clock size={12} />
+                                        <span className="text-[9px] font-bold uppercase tracking-widest">{metrics.time}</span>
+                                    </div>
+                                )}
+                                {metrics?.memory && (
+                                    <div className="flex items-center gap-2 opacity-40">
+                                        <Cpu size={12} />
+                                        <span className="text-[9px] font-bold uppercase tracking-widest">{metrics.memory}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

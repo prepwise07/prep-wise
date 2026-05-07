@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Editor from "@monaco-editor/react";
+import dynamic from "next/dynamic";
+
+// Lazy load Monaco Editor to improve initial load performance
+const Editor = dynamic(() => import("@monaco-editor/react"), {
+    ssr: false,
+    loading: () => (
+        <div className="h-full w-full flex items-center justify-center bg-[#1e1e1e]">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+        </div>
+    )
+});
 import {
     Play,
     Trash2,
@@ -14,7 +24,8 @@ import {
     Copy,
     Clock,
     Cpu,
-    Monitor
+    Monitor,
+    Loader2
 } from "lucide-react";
 
 // Types
@@ -46,8 +57,8 @@ const STARTER_CODE: Record<LanguageId, string> = {
 export default function SimpleCompiler() {
     const [languageId, setLanguageId] = useState<LanguageId>("java");
     const [code, setCode] = useState(STARTER_CODE["java"]);
-    const [stdin, setStdin] = useState("");
     const [output, setOutput] = useState("");
+    const [stdin, setStdin] = useState("");
     const [isRunning, setIsRunning] = useState(false);
     const [executionTime, setExecutionTime] = useState<number | null>(null);
 
@@ -68,27 +79,32 @@ export default function SimpleCompiler() {
                 body: JSON.stringify({
                     code,
                     languageId: activeLanguage.judgeId,
-                    stdin: stdin
+                    stdin
                 }),
             });
             const data = await res.json();
 
             let out = "";
-            if (data.stdout) out += data.stdout;
-            if (data.stderr) out += data.stderr;
-            if (data.compile_output) out += data.compile_output;
-
-            if (!out && data.status?.description) {
-                out = `System: ${data.status.description}`;
+            if (data.error) {
+                out = `Configuration Error: ${data.error}`;
+            } else if (data.status?.id !== 3 && data.status?.description) {
+                out = `Execution Status: ${data.status.description}\n`;
+                if (data.compile_output) out += `\n--- COMPILE ERROR ---\n${data.compile_output}`;
+                if (data.stderr) out += `\n--- RUNTIME ERROR ---\n${data.stderr}`;
+                if (data.message) out += `\n--- SYSTEM MESSAGE ---\n${data.message}`;
+            } else if (data.compile_output) {
+                out = `Compilation Error:\n${data.compile_output}`;
+            } else if (data.stderr) {
+                out = `Runtime Error:\n${data.stderr}`;
+            } else if (data.stdout) {
+                out = data.stdout;
+            } else if (data.message) {
+                out = `System Message:\n${data.message}`;
             }
 
-            // Handle mock output from the API if no key is present
-            if (out.includes("[MOCK OUTPUT]")) {
-                out = out.replace("[MOCK OUTPUT]", "System (Mock Mode):").trim();
-            }
-
-            setOutput(out || "Executed. No output.");
-            setExecutionTime(Math.round(performance.now() - startTime));
+            setOutput(out.trim() || "Executed. No output recorded.");
+            setExecutionTime(data.time ? parseFloat(data.time) * 1000 : null);
+            // We can also store memory if needed, but for now we'll stick to time
         } catch (e) {
             setOutput("Execution failed. Please check your connection.");
         } finally {
@@ -98,7 +114,6 @@ export default function SimpleCompiler() {
 
     const clearOutput = () => {
         setOutput("");
-        setStdin("");
         setExecutionTime(null);
     };
 
@@ -227,64 +242,68 @@ export default function SimpleCompiler() {
                 {/* ── Right Panel (Input & Output) ── */}
                 <div className="w-full md:w-[40%] bg-[#0a0514] border-l border-white/5 flex flex-col shrink-0">
 
-                    {/* Stdin Input Area */}
-                    <div className="h-1/3 flex flex-col border-b border-white/5">
-                        <div className="h-10 bg-black/40 border-b border-white/5 flex items-center justify-between px-6 shrink-0">
-                            <div className="flex items-center gap-2">
-                                <Settings size={12} className="text-white/40" />
-                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Input (stdin)</span>
-                            </div>
-                        </div>
-                        <textarea
-                            value={stdin}
-                            onChange={(e) => setStdin(e.target.value)}
-                            placeholder="Provide program input here..."
-                            className="flex-1 w-full bg-black/20 p-4 font-mono text-sm text-white/60 outline-none resize-none placeholder:text-white/10 custom-scrollbar"
-                        />
-                    </div>
-
-                    {/* Output Console */}
-                    <div className="flex-1 flex flex-col min-h-0">
-                        <div className="h-10 bg-black/40 border-b border-white/5 flex items-center justify-between px-6 shrink-0">
-                            <div className="flex items-center gap-2">
-                                <TerminalIcon size={12} className="text-white/40" />
-                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Output Console</span>
-                            </div>
-                            <button
-                                onClick={clearOutput}
-                                className="text-[9px] font-bold text-white/30 hover:text-white/60 flex items-center gap-1.5 transition-colors"
-                            >
-                                <Trash2 size={10} />
-                                Clear
-                            </button>
-                        </div>
-
-                        <div className="flex-1 p-6 font-mono text-sm overflow-y-auto custom-scrollbar bg-black/10">
-                            {!output && !isRunning ? (
-                                <div className="h-full flex flex-col items-center justify-center opacity-20 text-center space-y-4">
-                                    <TerminalIcon size={32} />
-                                    <p className="text-[10px] font-bold uppercase tracking-widest">Ready to execute...</p>
+                    {/* Combined Input & Output Terminal */}
+                    <div className="flex-1 flex flex-col min-h-0 relative bg-black/40">
+                        <div className="h-10 bg-black/60 border-b border-white/5 flex items-center justify-between px-6 shrink-0">
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <TerminalIcon size={12} className="text-[var(--primary)]" />
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/90">Interactive Terminal</span>
                                 </div>
-                            ) : isRunning ? (
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-2 text-white/40 animate-pulse">
-                                        <div className="w-1 h-4 bg-[var(--primary)] rounded-full" />
-                                        <span className="text-xs uppercase font-bold tracking-tighter">Compiling & Running...</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={clearOutput}
+                                    className="text-[9px] font-bold text-white/30 hover:text-white/60 flex items-center gap-1.5 transition-colors"
+                                >
+                                    <Trash2 size={10} />
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 p-0 flex flex-col overflow-hidden">
+                            {/* STDIN Section (Top) */}
+                            <div className="h-[120px] border-b border-white/5 flex flex-col group shrink-0">
+                                <div className="px-6 py-2 bg-white/2 flex items-center justify-between">
+                                    <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Program Input (STDIN)</span>
+                                </div>
+                                <textarea
+                                    value={stdin}
+                                    onChange={(e) => setStdin(e.target.value)}
+                                    className="flex-1 bg-transparent px-6 py-3 text-indigo-300/80 text-xs font-mono outline-none resize-none custom-scrollbar placeholder:text-white/5"
+                                    placeholder="Type input here (e.g. 10 20)..."
+                                />
+                            </div>
+
+                            {/* STDOUT Section (Bottom) */}
+                            <div className="flex-1 p-6 font-mono text-sm overflow-y-auto custom-scrollbar bg-black/20">
+                                {!output && !isRunning ? (
+                                    <div className="h-full flex flex-col items-center justify-center opacity-10 text-center space-y-4">
+                                        <TerminalIcon size={32} />
+                                        <p className="text-[10px] font-bold uppercase tracking-widest">Waiting for code to run...</p>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                                        <div className="flex items-center gap-2 text-green-500/60">
-                                            <ChevronRight size={14} />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">Execution Result</span>
+                                ) : isRunning ? (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3 text-[var(--primary)] animate-pulse">
+                                            <Loader2 size={14} className="animate-spin" />
+                                            <span className="text-[10px] uppercase font-black tracking-widest">Executing...</span>
                                         </div>
                                     </div>
-                                    <pre className="whitespace-pre-wrap text-white/90 leading-relaxed font-mono selection:bg-[var(--primary)]/30 text-[13px]">
-                                        {output}
-                                    </pre>
-                                </div>
-                            )}
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                                            <div className="flex items-center gap-2 text-green-500/60">
+                                                <ChevronRight size={14} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Stdout / Result</span>
+                                            </div>
+                                        </div>
+                                        <pre className="whitespace-pre-wrap text-white/90 leading-relaxed font-mono selection:bg-[var(--primary)]/30 text-[13px]">
+                                            {output}
+                                        </pre>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -294,6 +313,12 @@ export default function SimpleCompiler() {
                             <Cpu size={12} />
                             <span className="text-[9px] font-bold uppercase tracking-tighter">VM Status: Optimized</span>
                         </div>
+                        {executionTime !== null && (
+                            <div className="flex items-center gap-2 opacity-30">
+                                <Clock size={12} />
+                                <span className="text-[9px] font-bold uppercase tracking-tighter">Time: {executionTime.toFixed(0)}ms</span>
+                            </div>
+                        )}
                         <div className="flex items-center gap-2 opacity-30">
                             <Monitor size={12} />
                             <span className="text-[9px] font-bold uppercase tracking-tighter">Output: Validated</span>

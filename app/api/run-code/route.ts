@@ -3,80 +3,103 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { code, languageId, stdin } = body;
+        const { code, files, languageId, stdin } = body;
 
-        if (!code || !languageId) {
-            return NextResponse.json({ error: "Missing code or languageId" }, { status: 400 });
-        }
+        // If 'files' is provided, use it (Multi-file IDE). 
+        // If only 'code' is provided, convert to a single-file array (Simple Compiler).
+        let projectFiles = files || [];
 
-        // We use the public Judge0 CE instance.
-        // It's highly recommended to use a RapidAPI key for production.
-        // If the call stringently fails due to auth or rate limits on the free tier, we'll fallback to a mock response.
-
-        const JUDGE0_URL = process.env.JUDGE0_URL || "https://judge0-ce.p.rapidapi.com";
+        const ONECOMPILER_API_KEY = process.env.ONECOMPILER_API_KEY || "";
         const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || "";
 
-        const defaultHeaders: Record<string, string> = {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
+        if (!ONECOMPILER_API_KEY && !RAPIDAPI_KEY) {
+            return NextResponse.json({
+                error: "OneCompiler API Key is missing. Please add ONECOMPILER_API_KEY to your .env.local file."
+            }, { status: 401 });
+        }
+
+        // Map IDs to OneCompiler strings
+        const languageMap: Record<number | string, string> = {
+            71: "python", "python": "python",
+            50: "c", "c": "c",
+            54: "cpp", "cpp": "cpp",
+            62: "java", "java": "java",
+            63: "nodejs", "javascript": "nodejs",
+            60: "go", "go": "go",
+            73: "rust", "rust": "rust"
         };
 
-        if (RAPIDAPI_KEY) {
-            defaultHeaders["X-RapidAPI-Key"] = RAPIDAPI_KEY;
-            defaultHeaders["X-RapidAPI-Host"] = JUDGE0_URL.replace("https://", "");
+        const languageStr = languageMap[languageId] || languageId;
+
+        // OneCompiler API Configuration
+        const url = ONECOMPILER_API_KEY
+            ? "https://api.onecompiler.com/v1/run"
+            : "https://onecompiler.p.rapidapi.com/v1/run";
+
+        const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+        };
+
+        if (ONECOMPILER_API_KEY) {
+            headers["X-OneCompiler-Key"] = ONECOMPILER_API_KEY;
         } else {
-            console.warn("[RunCode] No RAPIDAPI_KEY found. Attempting to use unauthenticated or mock compilation.");
+            headers["x-rapidapi-key"] = RAPIDAPI_KEY;
+            headers["x-rapidapi-host"] = "onecompiler.p.rapidapi.com";
         }
 
-        let runResult: any = null;
-
-        try {
-            // Encode payload
-            const payload = {
-                language_id: languageId,
-                source_code: Buffer.from(code).toString("base64"),
-                stdin: stdin ? Buffer.from(stdin).toString("base64") : null,
+        // Handle case where it's a single-file call from SimpleCompiler
+        if (projectFiles.length === 0 && code) {
+            const filenames: Record<string, string> = {
+                python: "main.py", java: "Main.java", cpp: "main.cpp",
+                c: "main.c", nodejs: "index.js", go: "main.go", rust: "main.rs"
             };
-
-            const response = await fetch(`${JUDGE0_URL}/submissions?base64_encoded=true&wait=true`, {
-                method: "POST",
-                headers: defaultHeaders,
-                body: JSON.stringify(payload),
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                runResult = {
-                    stdout: data.stdout ? Buffer.from(data.stdout, "base64").toString("utf-8") : null,
-                    stderr: data.stderr ? Buffer.from(data.stderr, "base64").toString("utf-8") : null,
-                    compile_output: data.compile_output ? Buffer.from(data.compile_output, "base64").toString("utf-8") : null,
-                    time: data.time,
-                    memory: data.memory,
-                    status: data.status, // { id: 3, description: "Accepted" }
-                };
-            } else {
-                throw new Error(`Judge0 API error: ${response.status} ${response.statusText}`);
-            }
-        } catch (apiError: any) {
-            console.error("[RunCode] Judge0 API failed:", apiError.message);
-            // Fallback mock response so the UI doesn't completely break for the user if they haven't setup RapidAPI
-            console.log("[RunCode] Generating mock response for testing purposes.");
-
-            // Simulating basic execution based on language
-            const mockStdout = `[MOCK OUTPUT] Code executed successfully.\nInput was: ${stdin || "none"}\n`;
-            runResult = {
-                stdout: mockStdout,
-                stderr: null,
-                compile_output: null,
-                time: "0.045",
-                memory: 1248,
-                status: { id: 3, description: "Accepted" }
-            };
+            projectFiles = [
+                {
+                    name: filenames[languageStr as string] || "main.txt",
+                    content: code
+                }
+            ];
         }
+
+        const submissionPayload = {
+            language: languageStr,
+            stdin: stdin || "",
+            files: projectFiles
+        };
+
+        const runResponse = await fetch(url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(submissionPayload),
+        });
+
+        const data = await runResponse.json();
+
+        if (!runResponse.ok) {
+            return NextResponse.json({
+                error: `OneCompiler API Error: ${data.message || runResponse.statusText}`
+            }, { status: runResponse.status });
+        }
+
+        const runResult = {
+            stdout: data.stdout || null,
+            stderr: data.stderr || null,
+            compile_output: data.exception || null,
+            time: data.executionTime ? (data.executionTime / 1000).toString() : "0",
+            status: {
+                id: data.status === "success" ? 3 : 4,
+                description: data.status === "success" ? "Accepted" : "Error"
+            },
+            message: data.exception || null
+        };
 
         return NextResponse.json(runResult);
+
     } catch (error: any) {
-        console.error("Error running code:", error);
-        return NextResponse.json({ error: error.message || "Failed to execute code" }, { status: 500 });
+        console.error("[OneCompiler Error]:", error);
+        return NextResponse.json({
+            error: error.message || "Execution failed",
+            details: error.stack
+        }, { status: 500 });
     }
 }
