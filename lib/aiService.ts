@@ -1,5 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import Groq from "groq-sdk";
+// NOTE: groq-sdk is intentionally NOT imported at the top level.
+// It is loaded via dynamic import inside the function to prevent
+// Vercel/Turbopack from evaluating it at build time, which causes
+// the "Missing OPENAI_API_KEY" error from the Groq SDK's OpenAI-forked internals.
 
 /**
  * Delay helper for retry logic
@@ -11,17 +14,14 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  * Handles trailing commas, extra text outside JSON, etc.
  */
 function safeParseJSON<T>(raw: string): T {
-    // 1. Strip markdown code fences if present
     let text = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
 
-    // 2. Extract just the JSON object/array (ignore any surrounding text)
     const firstBrace = text.indexOf("{");
     const lastBrace = text.lastIndexOf("}");
     const firstBracket = text.indexOf("[");
     const lastBracket = text.lastIndexOf("]");
 
     if (firstBrace !== -1 && lastBrace > firstBrace) {
-        // Check if array starts before object
         if (firstBracket !== -1 && firstBracket < firstBrace && lastBracket > lastBrace) {
             text = text.substring(firstBracket, lastBracket + 1);
         } else {
@@ -29,17 +29,13 @@ function safeParseJSON<T>(raw: string): T {
         }
     }
 
-    // 3. Fix trailing commas before } or ]
     text = text.replace(/,\s*([\]}])/g, "$1");
-
     return JSON.parse(text) as T;
 }
 
 /**
- * High-Availability AI Service prioritizing Gemini with retry + Groq fallback.
- * @param systemPrompt The instructions for the AI on how to format the data and behave.
- * @param userPrompt The user content to analyze or process.
- * @returns Parsed JSON Data of type T.
+ * High-Availability AI Service prioritizing Gemini with Groq fallback.
+ * groq-sdk is dynamically imported at runtime to avoid build-time errors on Vercel.
  */
 export async function generateJSON<T>(systemPrompt: string, userPrompt: string): Promise<T> {
     // ── PHASE 1: Try Gemini (up to 3 attempts with backoff) ──
@@ -56,9 +52,7 @@ export async function generateJSON<T>(systemPrompt: string, userPrompt: string):
 
                 const result = await model.generateContent({
                     contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                    }
+                    generationConfig: { responseMimeType: "application/json" }
                 });
 
                 const text = result.response.text() || "{}";
@@ -74,7 +68,7 @@ export async function generateJSON<T>(systemPrompt: string, userPrompt: string):
 
                 if (isRetryable && attempt < maxRetries) {
                     const waitMs = attempt * 3000;
-                    console.warn(`[AIService] Gemini attempt ${attempt} failed (${geminiError.message?.substring(0, 60)}...) — Retrying in ${waitMs / 1000}s...`);
+                    console.warn(`[AIService] Gemini attempt ${attempt} failed — Retrying in ${waitMs / 1000}s...`);
                     await delay(waitMs);
                 } else {
                     console.warn(`[AIService] Gemini failed after attempt ${attempt}:`, geminiError.message?.substring(0, 120));
@@ -86,10 +80,11 @@ export async function generateJSON<T>(systemPrompt: string, userPrompt: string):
         console.warn("[AIService] GEMINI_API_KEY not configured. Skipping to Groq.");
     }
 
-    // ── PHASE 2: Fallback to Groq ──
+    // ── PHASE 2: Fallback to Groq (dynamic import — never runs at build time) ──
     if (process.env.GROQ_API_KEY) {
         try {
             console.log("[AIService] Attempting Fallback: Groq Llama 3.3 70b");
+            const { default: Groq } = await import("groq-sdk");
             const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
             const completion = await groq.chat.completions.create({
                 model: "llama-3.3-70b-versatile",
@@ -110,5 +105,5 @@ export async function generateJSON<T>(systemPrompt: string, userPrompt: string):
         }
     }
 
-    throw new Error("No AI provider configured. Please set GEMINI_API_KEY or GROQ_API_KEY in .env.local");
+    throw new Error("No AI provider configured. Please set GEMINI_API_KEY or GROQ_API_KEY.");
 }
