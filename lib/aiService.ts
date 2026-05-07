@@ -1,17 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Groq from "groq-sdk";
 
-// Lazy Loaders to ensure environment variables are present when needed
-const getGemini = () => {
-    return new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "missing");
-};
-
-const getGroq = () => {
-    return new Groq({
-        apiKey: process.env.GROQ_API_KEY || "missing",
-    });
-};
-
 /**
  * Delay helper for retry logic
  */
@@ -59,7 +48,7 @@ export async function generateJSON<T>(systemPrompt: string, userPrompt: string):
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 console.log(`[AIService] Gemini 2.5 Flash — Attempt ${attempt}/${maxRetries}`);
-                const genAI = getGemini();
+                const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
                 const model = genAI.getGenerativeModel({
                     model: "gemini-2.5-flash",
                     systemInstruction: systemPrompt,
@@ -101,7 +90,7 @@ export async function generateJSON<T>(systemPrompt: string, userPrompt: string):
     if (process.env.GROQ_API_KEY) {
         try {
             console.log("[AIService] Attempting Fallback: Groq Llama 3.3 70b");
-            const groq = getGroq();
+            const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
             const completion = await groq.chat.completions.create({
                 model: "llama-3.3-70b-versatile",
                 messages: [
