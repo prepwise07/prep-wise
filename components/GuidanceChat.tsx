@@ -76,6 +76,12 @@ export default function GuidanceChat() {
                 }
             }
         });
+        vapi.on("error", (e) => {
+            console.error("VAPI Error:", e);
+            setIsCallActive(false);
+            setIsStartingCall(false);
+            setAiStatus("idle");
+        });
         return () => { vapi.removeAllListeners(); };
     }, []);
 

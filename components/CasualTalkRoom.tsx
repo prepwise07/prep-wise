@@ -248,6 +248,12 @@ RULES:
                 }
             }
         });
+        vapi.on("error", (e) => {
+            console.error("VAPI Error:", e);
+            setIsCallActive(false);
+            setIsStarting(false);
+            setAiStatus("idle");
+        });
         return () => { vapi.removeAllListeners(); };
     }, []);
 

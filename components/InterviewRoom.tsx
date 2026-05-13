@@ -261,6 +261,11 @@ CRITICAL RULES:
                 }
             }
         });
+        vapi.on("error", (e) => {
+            console.error("VAPI Error:", e);
+            setIsCallActive(false);
+            setIsStarting(false);
+        });
         return () => { vapi.removeAllListeners(); };
     }, [questions, detectQuestionFromAIText]);
 
